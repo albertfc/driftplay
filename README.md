@@ -22,6 +22,7 @@ https://albertfc.github.io/driftplay/
 - Bounded hls.js buffer settings to avoid unbounded memory growth.
 - Recoverable hls.js media and network error handling with retry limits.
 - Media Session API integration for supported browsers.
+- Light and dark theme selector with local browser persistence.
 - Relative asset paths for GitHub Pages project-site hosting under `/driftplay/`.
 
 ## Usage

@@ -7,10 +7,12 @@
   const MAX_RECOVERY_ATTEMPTS = 2;
   const BUFFER_EPSILON_SECONDS = 0.35;
   const DELAY_APPLY_DEBOUNCE_MS = 350;
+  const THEME_STORAGE_KEY = "driftplay-theme";
 
   const elements = {
     form: document.querySelector("#stream-form"),
     streamUrl: document.querySelector("#stream-url"),
+    themeToggle: document.querySelector("#theme-toggle"),
     delaySeconds: document.querySelector("#delay-seconds"),
     playButton: document.querySelector("#play-button"),
     stopButton: document.querySelector("#stop-button"),
@@ -47,6 +49,10 @@
     handleDelayInput();
   });
 
+  elements.themeToggle.addEventListener("click", () => {
+    applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light", true);
+  });
+
   elements.form.addEventListener("submit", (event) => {
     event.preventDefault();
     const validation = validateInputs();
@@ -61,8 +67,27 @@
 
   elements.stopButton.addEventListener("click", stopPlayback);
 
+  initializeTheme();
   updateControlState();
   updateMediaSession();
+
+  function initializeTheme() {
+    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const preferredTheme = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    applyTheme(savedTheme === "light" || savedTheme === "dark" ? savedTheme : preferredTheme, false);
+  }
+
+  function applyTheme(theme, shouldPersist) {
+    const normalizedTheme = theme === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = normalizedTheme;
+    elements.themeToggle.setAttribute("aria-checked", String(normalizedTheme === "light"));
+    elements.themeToggle.querySelector(".theme-toggle-label").textContent =
+      normalizedTheme === "light" ? "Light mode" : "Dark mode";
+
+    if (shouldPersist) {
+      window.localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
+    }
+  }
 
   function handleDelayInput() {
     const delay = Number.parseFloat(elements.delaySeconds.value);
