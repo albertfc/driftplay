@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const MIN_DELAY_SECONDS = 1;
+  const MIN_DELAY_SECONDS = 0;
   const MAX_DELAY_SECONDS = 600;
   const DEFAULT_DELAY_SECONDS = 10;
   const MAX_RECOVERY_ATTEMPTS = 2;
@@ -66,8 +66,8 @@
 
   function handleDelayInput() {
     const delay = Number.parseFloat(elements.delaySeconds.value);
-    if (!Number.isFinite(delay) || delay <= 0) {
-      setError("Delay must be a positive finite number.");
+    if (!Number.isFinite(delay) || delay < 0) {
+      setError("Delay must be zero or a positive finite number.");
       return;
     }
 
@@ -109,8 +109,8 @@
     }
 
     const delaySeconds = Number.parseFloat(rawDelay);
-    if (!Number.isFinite(delaySeconds) || delaySeconds <= 0) {
-      return { ok: false, message: "Delay must be a positive finite number." };
+    if (!Number.isFinite(delaySeconds) || delaySeconds < 0) {
+      return { ok: false, message: "Delay must be zero or a positive finite number." };
     }
 
     if (delaySeconds < MIN_DELAY_SECONDS || delaySeconds > MAX_DELAY_SECONDS) {
@@ -167,7 +167,7 @@
     const targetTime = getTargetDelayedTime();
     if (targetTime === null) {
       state.pendingDelayApply = true;
-      setBufferStatus(`Waiting for ${formatSeconds(state.delaySeconds)} of audio`);
+      setBufferStatus(getDelayWaitStatus());
       setMessage(`Delay changed to ${formatSeconds(state.delaySeconds)}. Waiting until that position is available in the buffer.`);
       return;
     }
@@ -175,7 +175,7 @@
     elements.audio.currentTime = targetTime;
     state.pendingDelayApply = false;
     updateBufferReadout();
-    setMessage(`Delay changed to ${formatSeconds(state.delaySeconds)} behind the live edge.`);
+    setMessage(getPlaybackPositionMessage());
 
     if (state.wantsPlayback && elements.audio.paused) {
       playAudio();
@@ -285,7 +285,7 @@
     addAudioListener("playing", () => {
       state.hasStartedPlayback = true;
       setStatus("Playing");
-      setMessage("Audio playback is running behind the live edge.");
+      setMessage(getPlaybackPositionMessage());
       clearError();
       updateControlState();
     });
@@ -373,7 +373,7 @@
 
     const targetTime = getTargetDelayedTime();
     if (targetTime === null) {
-      setBufferStatus(`Waiting for ${formatSeconds(state.delaySeconds)} of audio`);
+      setBufferStatus(getDelayWaitStatus());
       return;
     }
 
@@ -487,14 +487,24 @@
         : `${formatSeconds(Math.max(0, liveEdge - currentTime))}`;
 
     if (!buffered.length) {
-      setBufferStatus("No buffered audio");
+      setBufferStatus(state.delaySeconds === 0 ? "Live" : "No buffered audio");
     } else if (elements.audio.paused) {
       setBufferStatus(isTimeBuffered(currentTime) ? "Paused position retained" : "Paused position expired");
     } else if (bufferedAhead < 1) {
-      setBufferStatus("Buffering audio");
+      setBufferStatus(state.delaySeconds === 0 ? "Live" : "Buffering audio");
     } else {
-      setBufferStatus(`${formatSeconds(bufferedAhead)} buffered ahead`);
+      setBufferStatus(state.delaySeconds === 0 ? "Live" : `${formatSeconds(bufferedAhead)} buffered ahead`);
     }
+  }
+
+  function getDelayWaitStatus() {
+    return state.delaySeconds === 0 ? "Live" : `Waiting for ${formatSeconds(state.delaySeconds)} of audio`;
+  }
+
+  function getPlaybackPositionMessage() {
+    return state.delaySeconds === 0
+      ? "Audio playback is live."
+      : `Audio playback is running ${formatSeconds(state.delaySeconds)} behind the live edge.`;
   }
 
   function getBufferedAhead(time) {
