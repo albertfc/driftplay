@@ -3,10 +3,121 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>driftplay</title>
+    <title>DriftPlay audio HLS player</title>
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <h1>driftplay</h1>
-    <p>DriftPlay — client-side m3u8/HLS player with a parameterized delay buffer for pause/resume</p>
+    <main class="app-shell">
+      <section class="hero" aria-labelledby="app-title">
+        <div>
+          <p class="eyebrow">Audio-only live HLS player</p>
+          <h1 id="app-title">DriftPlay</h1>
+          <p class="lede">
+            Load a CORS-enabled audio <code>.m3u8</code> stream and listen
+            behind the live edge with a configurable delay buffer.
+          </p>
+        </div>
+        <div class="audio-badge" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="stream-form-title">
+        <h2 id="stream-form-title">Stream setup</h2>
+        <form id="stream-form" novalidate>
+          <div class="field">
+            <label for="stream-url">HLS audio stream URL</label>
+            <input
+              id="stream-url"
+              name="streamUrl"
+              type="url"
+              inputmode="url"
+              autocomplete="url"
+              placeholder="https://example.com/live/audio.m3u8"
+              required
+            />
+          </div>
+
+          <button id="load-button" class="primary" type="submit">Load stream</button>
+        </form>
+      </section>
+
+      <section class="panel player-panel" aria-labelledby="player-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="player-title">Audio player</h2>
+            <p id="stream-title" class="muted">No stream loaded</p>
+          </div>
+          <p id="configured-delay" class="delay-pill">Delay: 10s</p>
+        </div>
+
+        <div class="player-settings">
+          <div class="field compact">
+            <label for="delay-seconds">Delay behind live edge</label>
+            <div class="inline-input">
+              <input
+                id="delay-seconds"
+                name="delaySeconds"
+                type="number"
+                min="1"
+                max="600"
+                step="0.5"
+                value="10"
+                required
+              />
+              <span>seconds</span>
+            </div>
+            <p class="hint">Changing this seeks to the selected delay after a short pause.</p>
+          </div>
+        </div>
+
+        <audio id="audio-player" controls preload="none"></audio>
+
+        <div class="controls" aria-label="Audio controls">
+          <button id="mute-button" type="button" disabled>Mute</button>
+        </div>
+
+        <dl class="status-grid">
+          <div>
+            <dt>Connection</dt>
+            <dd id="connection-status" aria-live="polite">Idle</dd>
+          </div>
+          <div>
+            <dt>Buffering</dt>
+            <dd id="buffer-status" aria-live="polite">No buffered audio</dd>
+          </div>
+          <div>
+            <dt>Buffered duration</dt>
+            <dd id="buffered-duration">0.0s</dd>
+          </div>
+          <div>
+            <dt>Estimated live-edge distance</dt>
+            <dd id="live-distance">Unknown</dd>
+          </div>
+        </dl>
+
+        <div id="message-area" class="message" role="status" aria-live="polite"></div>
+        <div id="error-area" class="error" role="alert" aria-live="assertive"></div>
+      </section>
+
+      <section class="panel limitations" aria-labelledby="limitations-title">
+        <h2 id="limitations-title">Important limitations</h2>
+        <ul>
+          <li>The HLS manifest and all audio segments must allow browser CORS requests.</li>
+          <li>GitHub Pages cannot bypass CORS because DriftPlay has no backend proxy.</li>
+          <li>The browser tab must stay open for live media ingestion to continue.</li>
+          <li>Browser memory, Media Source Extensions, hls.js eviction, and the origin playlist window limit retained audio.</li>
+          <li>Paused positions can expire, and the buffer is not persistent across reloads.</li>
+          <li>Autoplay policies may require clicking Play before audio starts.</li>
+          <li>HLS audio codec support varies by browser; streams with video or unsupported codecs may fail.</li>
+        </ul>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>
