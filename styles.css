@@ -470,6 +470,29 @@ audio {
   color: var(--danger);
 }
 
+.app-footer {
+  margin-top: 0.5rem;
+  padding: 0 0.25rem;
+  text-align: center;
+}
+
+.app-footer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.app-footer a {
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-footer a:hover,
+.app-footer a:focus-visible {
+  text-decoration: underline;
+}
+
 .limitations ul {
   margin: 1rem 0 0;
   padding-left: 1.25rem;

@@ -100,6 +100,8 @@
       mediaSessionDefaultTitle: "DriftPlay audio stream",
       mediaSessionAlbum: "Live audio",
       unknownHlsDetail: "unknown HLS error",
+      footerMadeBy: "Made by",
+      footerSourceLink: "Source on GitHub",
     },
     ca: {
       eyebrow: "Reproductor d'àudio en directe",
@@ -200,6 +202,8 @@
       mediaSessionDefaultTitle: "Emissió d'àudio de DriftPlay",
       mediaSessionAlbum: "Àudio en directe",
       unknownHlsDetail: "error HLS desconegut",
+      footerMadeBy: "Fet per",
+      footerSourceLink: "Codi font a GitHub",
     },
     es: {
       eyebrow: "Reproductor de audio en directo",
@@ -295,6 +299,8 @@
       mediaSessionDefaultTitle: "Emisión de audio de DriftPlay",
       mediaSessionAlbum: "Audio en directo",
       unknownHlsDetail: "error HLS desconocido",
+      footerMadeBy: "Hecho por",
+      footerSourceLink: "Código fuente en GitHub",
     },
   };
 
