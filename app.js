@@ -31,6 +31,7 @@
     stopButton: document.querySelector("#stop-button"),
     popularStreamsStatus: document.querySelector("#popular-streams-status"),
     popularStreamsList: document.querySelector("#popular-streams-list"),
+    popularStreamsSlider: document.querySelector("#popular-streams-slider"),
     audio: document.querySelector("#audio-player"),
     connectionStatus: document.querySelector("#connection-status"),
     bufferStatus: document.querySelector("#buffer-status"),
@@ -81,6 +82,13 @@
   });
 
   elements.stopButton.addEventListener("click", stopPlayback);
+  elements.popularStreamsSlider.addEventListener("input", () => {
+    elements.popularStreamsList.scrollLeft = Number(elements.popularStreamsSlider.value);
+  });
+  elements.popularStreamsList.addEventListener("scroll", () => {
+    elements.popularStreamsSlider.value = String(Math.round(elements.popularStreamsList.scrollLeft));
+  });
+  window.addEventListener("resize", updatePopularStreamsSlider);
 
   initializeTheme();
   populatePopularStreams();
@@ -165,6 +173,15 @@
       button.append(image, label);
       elements.popularStreamsList.append(button);
     });
+
+    window.requestAnimationFrame(updatePopularStreamsSlider);
+  }
+
+  function updatePopularStreamsSlider() {
+    const maxScroll = Math.max(0, elements.popularStreamsList.scrollWidth - elements.popularStreamsList.clientWidth);
+    elements.popularStreamsSlider.max = String(Math.ceil(maxScroll));
+    elements.popularStreamsSlider.value = String(Math.min(Number(elements.popularStreamsSlider.value), maxScroll));
+    elements.popularStreamsSlider.hidden = maxScroll <= 0;
   }
 
   function getMarkdownCell(row, index) {
