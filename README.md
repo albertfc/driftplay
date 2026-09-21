@@ -28,10 +28,10 @@ https://albertfc.github.io/driftplay/
 
 1. Open the app.
 2. Enter a CORS-enabled HLS audio `.m3u8` URL using `http` or `https`.
-3. Select **Load stream**.
+3. Select **Play**.
 4. Adjust the target delay in the audio player. Delay changes are debounced
    briefly and then applied to the current stream.
-5. If playback does not start automatically, use the browser audio element
+5. Select **Stop** to stop an active stream. If playback does not start automatically, use the browser audio element
    controls. Browser autoplay policies may require this extra user gesture.
 
 ## Local development

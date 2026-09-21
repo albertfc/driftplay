@@ -12,7 +12,8 @@
     form: document.querySelector("#stream-form"),
     streamUrl: document.querySelector("#stream-url"),
     delaySeconds: document.querySelector("#delay-seconds"),
-    loadButton: document.querySelector("#load-button"),
+    playButton: document.querySelector("#play-button"),
+    stopButton: document.querySelector("#stop-button"),
     audio: document.querySelector("#audio-player"),
     connectionStatus: document.querySelector("#connection-status"),
     bufferStatus: document.querySelector("#buffer-status"),
@@ -58,6 +59,8 @@
 
     loadStream(validation.url, validation.delaySeconds);
   });
+
+  elements.stopButton.addEventListener("click", stopPlayback);
 
   updateControlState();
   updateMediaSession();
@@ -289,6 +292,7 @@
       clearError();
       updateControlState();
     });
+    addAudioListener("play", updateControlState);
     addAudioListener("pause", () => {
       if (state.isLoaded) {
         setStatus("Paused");
@@ -302,6 +306,14 @@
   function addAudioListener(eventName, handler) {
     elements.audio.addEventListener(eventName, handler);
     state.audioListeners.push([eventName, handler]);
+  }
+
+  function stopPlayback() {
+    if (!state.isLoaded || elements.audio.paused) {
+      return;
+    }
+
+    resetPlayback();
   }
 
   function selectAudioOnlyLevel(data) {
@@ -643,7 +655,10 @@
   }
 
   function updateControlState() {
-    elements.loadButton.disabled = state.isLoading;
+    const isPlaying = state.isLoaded && !elements.audio.paused;
+
+    elements.playButton.disabled = state.isLoading || isPlaying;
+    elements.stopButton.disabled = !isPlaying;
   }
 
   function updateMediaSession() {
