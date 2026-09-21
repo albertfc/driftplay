@@ -8,6 +8,13 @@
   const BUFFER_EPSILON_SECONDS = 0.35;
   const DELAY_APPLY_DEBOUNCE_MS = 350;
   const THEME_STORAGE_KEY = "driftplay-theme";
+  const RADIO_SOURCE_URL = "https://raw.githubusercontent.com/LaQuay/TDTChannels/master/RADIO.md";
+  const POPULAR_STREAMS = [
+    { sourceName: "Radio Nacional", displayName: "Radio Nacional" },
+    { sourceName: "Catalunya Ràdio", displayName: "Catalunya Radio" },
+    { sourceName: "Onda Cero", displayName: "Onda Cero" },
+    { sourceName: "Radio Euskadi", displayName: "Radio Euskadi" },
+  ];
 
   const elements = {
     form: document.querySelector("#stream-form"),
@@ -16,6 +23,8 @@
     delaySeconds: document.querySelector("#delay-seconds"),
     playButton: document.querySelector("#play-button"),
     stopButton: document.querySelector("#stop-button"),
+    popularStreamsStatus: document.querySelector("#popular-streams-status"),
+    popularStreamsList: document.querySelector("#popular-streams-list"),
     audio: document.querySelector("#audio-player"),
     connectionStatus: document.querySelector("#connection-status"),
     bufferStatus: document.querySelector("#buffer-status"),
@@ -68,8 +77,117 @@
   elements.stopButton.addEventListener("click", stopPlayback);
 
   initializeTheme();
+  populatePopularStreams();
   updateControlState();
   updateMediaSession();
+
+  async function populatePopularStreams() {
+    elements.popularStreamsStatus.textContent = "Loading popular streams...";
+
+    try {
+      const response = await fetch(RADIO_SOURCE_URL, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const markdown = await response.text();
+      const streams = parsePopularStreams(markdown);
+
+      if (!streams.length) {
+        elements.popularStreamsStatus.textContent = "Popular streams are unavailable right now.";
+        return;
+      }
+
+      renderPopularStreams(streams);
+      elements.popularStreamsStatus.textContent = "";
+    } catch {
+      elements.popularStreamsStatus.textContent = "Popular streams could not be loaded.";
+    }
+  }
+
+  function parsePopularStreams(markdown) {
+    const rows = markdown.split("\n").filter((line) => line.startsWith("| ") && !/^\|\s*-/.test(line));
+
+    return POPULAR_STREAMS.map((preset) => {
+      const row = rows.find((line) => normalizeName(getMarkdownCell(line, 0)) === normalizeName(preset.sourceName));
+      if (!row) {
+        return null;
+      }
+
+      const streamUrl = getPreferredStreamUrl(getMarkdownCell(row, 1));
+      const logoUrl = getFirstMarkdownLinkUrl(getMarkdownCell(row, 3));
+
+      if (!streamUrl || !logoUrl) {
+        return null;
+      }
+
+      return {
+        title: preset.displayName,
+        streamUrl,
+        logoUrl,
+      };
+    }).filter(Boolean);
+  }
+
+  function renderPopularStreams(streams) {
+    elements.popularStreamsList.textContent = "";
+
+    streams.forEach((stream) => {
+      const button = document.createElement("button");
+      button.className = "stream-card";
+      button.type = "button";
+      button.addEventListener("click", () => {
+        elements.streamUrl.value = stream.streamUrl;
+        loadStream(stream.streamUrl, state.delaySeconds, { title: stream.title });
+      });
+
+      const image = document.createElement("img");
+      image.src = stream.logoUrl;
+      image.alt = "";
+      image.loading = "lazy";
+
+      const label = document.createElement("span");
+      label.textContent = stream.title;
+
+      button.append(image, label);
+      elements.popularStreamsList.append(button);
+    });
+  }
+
+  function getMarkdownCell(row, index) {
+    return row.split("|").slice(1, -1)[index].trim();
+  }
+
+  function getPreferredStreamUrl(cell) {
+    const links = getMarkdownLinks(cell);
+    const hlsLink = links.find((link) => link.label.toLowerCase().includes("m3u8") || link.url.toLowerCase().includes(".m3u8"));
+    return hlsLink ? hlsLink.url : "";
+  }
+
+  function getFirstMarkdownLinkUrl(cell) {
+    const links = getMarkdownLinks(cell);
+    return links.length ? links[0].url : "";
+  }
+
+  function getMarkdownLinks(text) {
+    const links = [];
+    const linkPattern = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+    let match = linkPattern.exec(text);
+
+    while (match) {
+      links.push({ label: match[1], url: match[2] });
+      match = linkPattern.exec(text);
+    }
+
+    return links;
+  }
+
+  function normalizeName(name) {
+    return name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
 
   function initializeTheme() {
     const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -148,14 +266,15 @@
     return { ok: true, url: url.href, delaySeconds };
   }
 
-  function loadStream(streamUrl, delaySeconds) {
+  function loadStream(streamUrl, delaySeconds, options = {}) {
     resetPlayback();
 
     state.streamUrl = streamUrl;
     state.delaySeconds = clampDelay(delaySeconds);
     state.isLoading = true;
     state.wantsPlayback = true;
-    elements.streamTitle.textContent = getStreamTitle(streamUrl);
+    state.lastMetadataTitle = options.title || "";
+    elements.streamTitle.textContent = options.title || getStreamTitle(streamUrl);
     setStatus("Loading stream");
     setMessage("Loading the live audio stream. Playback will begin when enough buffered audio is available.");
     clearError();

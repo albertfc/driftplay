@@ -319,6 +319,39 @@ select:focus-visible {
   margin-bottom: 1rem;
 }
 
+.stream-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1rem;
+}
+
+.stream-loading {
+  margin: 0;
+  color: var(--muted);
+}
+
+.stream-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  border-radius: 22px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stream-card img {
+  width: 4.5rem;
+  height: 4.5rem;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  object-fit: cover;
+  background: var(--input-bg);
+}
+
+.stream-card span {
+  font-weight: 800;
+}
+
 audio {
   display: block;
   width: 100%;

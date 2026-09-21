@@ -33,6 +33,20 @@
         </div>
       </section>
 
+      <section class="panel popular-streams" aria-labelledby="popular-streams-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="popular-streams-title">Popular streams</h2>
+            <p class="muted">Choose a predefined CORS-enabled HLS audio stream.</p>
+          </div>
+        </div>
+
+        <p id="popular-streams-status" class="stream-loading" role="status" aria-live="polite">
+          Loading popular streams...
+        </p>
+        <div id="popular-streams-list" class="stream-grid"></div>
+      </section>
+
       <section class="panel" aria-labelledby="stream-form-title">
         <h2 id="stream-form-title">Stream setup</h2>
         <form id="stream-form" novalidate>

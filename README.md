@@ -14,7 +14,9 @@ https://albertfc.github.io/driftplay/
 - HTML `<audio>` playback only; no video element or video UI.
 - hls.js playback for browsers with Media Source Extensions.
 - Native HLS playback where available, especially Safari and Apple platforms.
-- Configurable fixed live delay from 1 to 600 seconds.
+- Configurable fixed live delay from 0 to 600 seconds.
+- Popular stream presets loaded asynchronously from TDTChannels RADIO.md for
+  Radio Nacional, Catalunya Radio, Onda Cero, and Radio Euskadi.
 - Startup waits for enough buffered or seekable media before attempting playback.
 - Pause and resume support through the browser audio element while the paused
   position remains locally buffered.
