@@ -215,11 +215,16 @@ input:focus-visible {
 }
 
 .player-settings {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 1rem;
-  margin-top: 1.25rem;
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.player-settings label {
+  text-align: right;
+}
+
+.player-settings input[type="number"] {
+  width: 5.5rem;
 }
 
 .section-heading {
@@ -228,16 +233,6 @@ input:focus-visible {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
-}
-
-.delay-pill {
-  margin: 0;
-  border: 1px solid rgb(102 227 255 / 0.3);
-  border-radius: 999px;
-  padding: 0.45rem 0.75rem;
-  background: rgb(102 227 255 / 0.08);
-  color: var(--accent);
-  font-weight: 800;
 }
 
 audio {

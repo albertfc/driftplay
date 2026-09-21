@@ -19,7 +19,6 @@
     bufferStatus: document.querySelector("#buffer-status"),
     bufferedDuration: document.querySelector("#buffered-duration"),
     liveDistance: document.querySelector("#live-distance"),
-    configuredDelay: document.querySelector("#configured-delay"),
     streamTitle: document.querySelector("#stream-title"),
     messageArea: document.querySelector("#message-area"),
     errorArea: document.querySelector("#error-area"),
@@ -78,7 +77,6 @@
     }
 
     state.delaySeconds = delay;
-    elements.configuredDelay.textContent = `Delay: ${formatSeconds(state.delaySeconds)}`;
     clearError();
 
     if (state.delayApplyTimer) {
@@ -132,7 +130,6 @@
     state.delaySeconds = clampDelay(delaySeconds);
     state.isLoading = true;
     state.wantsPlayback = true;
-    elements.configuredDelay.textContent = `Delay: ${formatSeconds(state.delaySeconds)}`;
     elements.streamTitle.textContent = getStreamTitle(streamUrl);
     setStatus("Loading stream");
     setMessage("Loading the live audio stream. Playback will begin when enough buffered audio is available.");
