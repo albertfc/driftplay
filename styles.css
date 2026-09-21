@@ -159,9 +159,7 @@ h2 {
   margin-top: 1rem;
 }
 
-form,
-.controls,
-.volume-control {
+form {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
@@ -248,20 +246,6 @@ audio {
   margin: 1rem 0;
 }
 
-.volume-control {
-  align-items: center;
-  margin-top: 1rem;
-}
-
-.volume-control span {
-  margin: 0;
-  font-weight: 700;
-}
-
-.volume-control input {
-  width: min(20rem, 100%);
-}
-
 .status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
@@ -330,7 +314,4 @@ audio {
   }
 
   button,
-  .controls button {
-    width: 100%;
-  }
 }

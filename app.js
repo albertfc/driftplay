@@ -14,7 +14,6 @@
     delaySeconds: document.querySelector("#delay-seconds"),
     loadButton: document.querySelector("#load-button"),
     audio: document.querySelector("#audio-player"),
-    muteButton: document.querySelector("#mute-button"),
     connectionStatus: document.querySelector("#connection-status"),
     bufferStatus: document.querySelector("#buffer-status"),
     bufferedDuration: document.querySelector("#buffered-duration"),
@@ -59,8 +58,6 @@
 
     loadStream(validation.url, validation.delaySeconds);
   });
-
-  elements.muteButton.addEventListener("click", toggleMute);
 
   updateControlState();
   updateMediaSession();
@@ -300,7 +297,6 @@
       updateControlState();
     });
     addAudioListener("error", () => handleMediaError());
-    addAudioListener("volumechange", updateControlState);
   }
 
   function addAudioListener(eventName, handler) {
@@ -647,11 +643,7 @@
   }
 
   function updateControlState() {
-    const canUsePlayer = state.isLoaded || state.isLoading;
-
     elements.loadButton.disabled = state.isLoading;
-    elements.muteButton.disabled = !canUsePlayer;
-    elements.muteButton.textContent = elements.audio.muted ? "Unmute" : "Mute";
   }
 
   function updateMediaSession() {
@@ -676,11 +668,6 @@
     } catch {
       // Some browsers expose Media Session but support only a subset of actions.
     }
-  }
-
-  function toggleMute() {
-    elements.audio.muted = !elements.audio.muted;
-    updateControlState();
   }
 
   function getStreamTitle(streamUrl) {
