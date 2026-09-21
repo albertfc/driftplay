@@ -78,8 +78,8 @@ DriftPlay cannot make every stream playable. Important limitations:
 - hls.js may evict old buffered media.
 - The origin server's live playlist window limits what can be downloaded and
   retained.
-- Direct MP3/AAC live streams may not expose a seekable delayed buffer; in that
-  case playback starts at the browser's available live position.
+- Direct MP3/AAC live stream delay is best-effort and depends on the browser
+  exposing enough buffered audio for the requested delay.
 - A paused position may eventually expire if it is no longer available locally.
 - The buffer is not persistent across page reloads.
 - Browser autoplay policies may require the user to click **Play** before audio

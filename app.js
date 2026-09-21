@@ -320,13 +320,6 @@
 
     const targetTime = getTargetDelayedTime();
     if (targetTime === null) {
-      if (state.directAudio) {
-        state.pendingDelayApply = false;
-        setBufferStatus(state.delaySeconds === 0 ? "Live" : "Delay unavailable");
-        setMessage("This direct audio stream does not expose a delayed buffered range. Playback continues at the browser's available live position.");
-        return;
-      }
-
       state.pendingDelayApply = true;
       setBufferStatus(getDelayWaitStatus());
       setMessage(`Delay changed to ${formatSeconds(state.delaySeconds)}. Waiting until that position is available in the buffer.`);
@@ -422,7 +415,6 @@
     elements.audio.src = streamUrl;
     elements.audio.load();
     startBufferMonitor();
-    playAudio();
   }
 
   function onHls(eventName, handler) {
@@ -544,7 +536,25 @@
     }
 
     if (state.directAudio) {
-      setBufferStatus(elements.audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "Live" : "Loading direct audio");
+      if (state.delaySeconds === 0) {
+        setBufferStatus(elements.audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "Live" : "Loading direct audio");
+        playAudio();
+        return;
+      }
+
+      const directTargetTime = getTargetDelayedTime();
+      if (directTargetTime === null) {
+        state.pendingDelayApply = true;
+        setBufferStatus(getDelayWaitStatus());
+        setMessage(`Buffering direct audio until ${formatSeconds(state.delaySeconds)} of delay is available.`);
+        return;
+      }
+
+      if (state.pendingDelayApply || !state.hasStartedPlayback || !isTimeBuffered(elements.audio.currentTime)) {
+        elements.audio.currentTime = directTargetTime;
+        state.pendingDelayApply = false;
+      }
+
       playAudio();
       return;
     }
@@ -582,8 +592,16 @@
   function getTargetDelayedTime() {
     const buffered = elements.audio.buffered;
     if (buffered.length > 0) {
-      const bufferedLiveEdge = buffered.end(buffered.length - 1);
-      const bufferedTarget = Math.max(0, bufferedLiveEdge - state.delaySeconds);
+      const lastRangeIndex = buffered.length - 1;
+      const bufferedRangeStart = buffered.start(lastRangeIndex);
+      const bufferedLiveEdge = buffered.end(lastRangeIndex);
+      const bufferedRangeDuration = bufferedLiveEdge - bufferedRangeStart;
+
+      if (state.directAudio && state.delaySeconds > 0 && bufferedRangeDuration < state.delaySeconds) {
+        return null;
+      }
+
+      const bufferedTarget = Math.max(bufferedRangeStart, bufferedLiveEdge - state.delaySeconds);
       return isTimeBuffered(bufferedTarget) ? bufferedTarget : null;
     }
 
@@ -664,8 +682,8 @@
         ? "Unknown"
         : `${formatSeconds(Math.max(0, liveEdge - currentTime))}`;
 
-    if (state.directAudio) {
-      setBufferStatus(elements.audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "Live" : "Loading direct audio");
+    if (state.directAudio && !buffered.length) {
+      setBufferStatus(state.delaySeconds === 0 ? "Loading direct audio" : getDelayWaitStatus());
     } else if (!buffered.length) {
       setBufferStatus(state.delaySeconds === 0 ? "Live" : "No buffered audio");
     } else if (elements.audio.paused) {
@@ -683,7 +701,9 @@
 
   function getPlaybackPositionMessage() {
     if (state.directAudio) {
-      return "Direct audio playback is live.";
+      return state.delaySeconds === 0
+        ? "Direct audio playback is live."
+        : `Direct audio playback is running ${formatSeconds(state.delaySeconds)} behind the stream buffer.`;
     }
 
     return state.delaySeconds === 0
