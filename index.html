@@ -10,14 +10,19 @@
     <main class="app-shell">
       <section class="hero" aria-labelledby="app-title">
         <div>
-          <p class="eyebrow">Audio-only live stream player</p>
+          <p class="eyebrow" data-i18n="eyebrow">Audio-only live stream player</p>
           <h1 id="app-title">DriftPlay</h1>
-          <p class="lede">
+          <p class="lede" data-i18n="lede">
             Load a CORS-enabled HLS or direct audio stream and listen behind
             the live edge with a configurable delay buffer where available.
           </p>
         </div>
         <div class="hero-tools">
+          <div class="lang-switcher" role="group" data-i18n-aria-label="langSwitcherAriaLabel" aria-label="Language">
+            <button class="lang-option" type="button" data-lang="en" aria-pressed="false">EN</button>
+            <button class="lang-option" type="button" data-lang="ca" aria-pressed="false">CA</button>
+            <button class="lang-option" type="button" data-lang="es" aria-pressed="false">ES</button>
+          </div>
           <button id="theme-toggle" class="theme-toggle" type="button" role="switch" aria-checked="false">
             <span class="theme-toggle-label">Light mode</span>
             <span class="theme-toggle-track" aria-hidden="true">
@@ -36,12 +41,12 @@
       <section class="panel popular-streams" aria-labelledby="popular-streams-title">
         <div class="section-heading">
           <div>
-            <h2 id="popular-streams-title">Popular streams</h2>
-            <p class="muted">Choose a predefined CORS-enabled HLS audio stream.</p>
+            <h2 id="popular-streams-title" data-i18n="popularStreamsTitle">Popular streams</h2>
+            <p class="muted" data-i18n="popularStreamsDesc">Choose a predefined CORS-enabled HLS audio stream.</p>
           </div>
         </div>
 
-        <p id="popular-streams-status" class="stream-loading" role="status" aria-live="polite">
+        <p id="popular-streams-status" class="stream-loading" role="status" aria-live="polite" data-i18n="popularStreamsLoading">
           Loading popular streams...
         </p>
         <div id="popular-streams-list" class="stream-grid"></div>
@@ -51,42 +56,45 @@
           type="range"
           min="0"
           value="0"
+          data-i18n-aria-label="popularStreamsSliderAriaLabel"
           aria-label="Scroll popular streams"
           hidden
         />
       </section>
 
       <section class="panel" aria-labelledby="stream-form-title">
-        <h2 id="stream-form-title">Stream setup</h2>
+        <h2 id="stream-form-title" data-i18n="streamUrlLabel">Audio stream URL</h2>
         <form id="stream-form" novalidate>
           <div class="field">
-            <label for="stream-url">Audio stream URL</label>
             <input
               id="stream-url"
               name="streamUrl"
               type="url"
               inputmode="url"
               autocomplete="url"
+              data-i18n-placeholder="streamUrlPlaceholder"
+              data-i18n-aria-label="streamUrlLabel"
               placeholder="https://example.com/live/audio.m3u8 or https://example.com/live/audio.mp3"
+              aria-label="Audio stream URL"
               required
             />
           </div>
 
-          <button id="play-button" class="primary" type="submit">Play</button>
-          <button id="stop-button" class="primary" type="button" disabled>Stop</button>
+          <button id="play-button" class="primary" type="submit" data-i18n="playButton">Play</button>
+          <button id="stop-button" class="primary" type="button" data-i18n="stopButton" disabled>Stop</button>
         </form>
       </section>
 
       <section class="panel player-panel" aria-labelledby="player-title">
         <div class="section-heading">
           <div>
-            <h2 id="player-title">Audio player</h2>
-            <p id="stream-title" class="muted">No stream loaded</p>
+            <h2 id="player-title" data-i18n="playerTitle">Audio player</h2>
+            <p id="stream-title" class="muted" data-i18n="noStreamLoaded">No stream loaded</p>
           </div>
           <div class="player-settings">
-            <label for="delay-seconds">Delay in seconds</label>
+            <label for="delay-seconds" data-i18n="delayLabel">Delay in seconds</label>
             <div class="delay-stepper">
-              <button id="delay-decrease" type="button" aria-label="Decrease delay">-</button>
+              <button id="delay-decrease" type="button" data-i18n-aria-label="delayDecreaseAria" aria-label="Decrease delay">-</button>
               <input
                 id="delay-seconds"
                 name="delaySeconds"
@@ -96,7 +104,7 @@
                 readonly
                 required
               />
-              <button id="delay-increase" type="button" aria-label="Increase delay">+</button>
+              <button id="delay-increase" type="button" data-i18n-aria-label="delayIncreaseAria" aria-label="Increase delay">+</button>
             </div>
           </div>
         </div>
@@ -105,20 +113,20 @@
 
         <dl class="status-grid">
           <div>
-            <dt>Connection</dt>
-            <dd id="connection-status" aria-live="polite">Idle</dd>
+            <dt data-i18n="connectionLabel">Connection</dt>
+            <dd id="connection-status" aria-live="polite" data-i18n="idleStatus">Idle</dd>
           </div>
           <div>
-            <dt>Buffering</dt>
-            <dd id="buffer-status" aria-live="polite">No buffered audio</dd>
+            <dt data-i18n="bufferingLabel">Buffering</dt>
+            <dd id="buffer-status" aria-live="polite" data-i18n="noBufferedAudio">No buffered audio</dd>
           </div>
           <div>
-            <dt>Buffered duration</dt>
+            <dt data-i18n="bufferedDurationLabel">Buffered duration</dt>
             <dd id="buffered-duration">0.0s</dd>
           </div>
           <div>
-            <dt>Estimated live-edge distance</dt>
-            <dd id="live-distance">Unknown</dd>
+            <dt data-i18n="liveDistanceLabel">Estimated live-edge distance</dt>
+            <dd id="live-distance" data-i18n="unknownValue">Unknown</dd>
           </div>
         </dl>
 
@@ -129,6 +137,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+    <script src="./i18n.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

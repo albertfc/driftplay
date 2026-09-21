@@ -1,12 +1,16 @@
 (() => {
   "use strict";
 
+  const t = (key, params) => (window.DriftPlayI18n ? window.DriftPlayI18n.t(key, params) : key);
+
   const MIN_DELAY_SECONDS = 0;
   const MAX_DELAY_SECONDS = 600;
   const DEFAULT_DELAY_SECONDS = 0;
   const MAX_RECOVERY_ATTEMPTS = 2;
   const BUFFER_EPSILON_SECONDS = 0.35;
   const DELAY_STEP_SECONDS = 1;
+  const DELAY_HOLD_DELAY_MS = 400;
+  const DELAY_REPEAT_INTERVAL_MS = 80;
   const DELAY_APPLY_DEBOUNCE_MS = 350;
   const THEME_STORAGE_KEY = "driftplay-theme";
   const RADIO_SOURCE_URL = "https://raw.githubusercontent.com/LaQuay/TDTChannels/master/RADIO.md";
@@ -60,10 +64,19 @@
     nativeHls: false,
     directAudio: false,
     lastMetadataTitle: "",
+    statusKey: "idleStatus",
+    statusParams: null,
+    bufferStatusKey: "noBufferedAudio",
+    bufferStatusParams: null,
+    messageKey: null,
+    messageParams: null,
+    errorKey: null,
+    errorParams: null,
+    popularStreamsStatusKey: "popularStreamsLoading",
   };
 
-  elements.delayDecrease.addEventListener("click", () => stepDelay(-1));
-  elements.delayIncrease.addEventListener("click", () => stepDelay(1));
+  attachDelayHoldRepeat(elements.delayDecrease, -1);
+  attachDelayHoldRepeat(elements.delayIncrease, 1);
 
   elements.themeToggle.addEventListener("click", () => {
     applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light", true);
@@ -74,7 +87,7 @@
     const validation = validateInputs();
 
     if (!validation.ok) {
-      setError(validation.message);
+      setError(validation.key, validation.params);
       return;
     }
 
@@ -96,7 +109,7 @@
   updateMediaSession();
 
   async function populatePopularStreams() {
-    elements.popularStreamsStatus.textContent = "Loading popular streams...";
+    setPopularStreamsStatus("popularStreamsLoading");
 
     try {
       const response = await fetch(RADIO_SOURCE_URL, { cache: "no-store" });
@@ -108,14 +121,14 @@
       const streams = parsePopularStreams(markdown);
 
       if (!streams.length) {
-        elements.popularStreamsStatus.textContent = "Popular streams are unavailable right now.";
+        setPopularStreamsStatus("popularStreamsUnavailable");
         return;
       }
 
       renderPopularStreams(streams);
-      elements.popularStreamsStatus.textContent = "";
+      setPopularStreamsStatus(null);
     } catch {
-      elements.popularStreamsStatus.textContent = "Popular streams could not be loaded.";
+      setPopularStreamsStatus("popularStreamsLoadError");
     }
   }
 
@@ -124,6 +137,59 @@
     const nextDelay = clampDelay(currentDelay + direction * DELAY_STEP_SECONDS);
     elements.delaySeconds.value = formatDelayValue(nextDelay);
     handleDelayInput();
+  }
+
+  function attachDelayHoldRepeat(button, direction) {
+    let holdTimer = 0;
+    let repeatTimer = 0;
+    let isHolding = false;
+
+    function stop() {
+      if (holdTimer) {
+        window.clearTimeout(holdTimer);
+        holdTimer = 0;
+      }
+      if (repeatTimer) {
+        window.clearInterval(repeatTimer);
+        repeatTimer = 0;
+      }
+    }
+
+    function start(event) {
+      if (event.pointerType === "mouse" && event.button !== 0) {
+        return;
+      }
+
+      if (button.disabled) {
+        return;
+      }
+
+      isHolding = false;
+      holdTimer = window.setTimeout(() => {
+        isHolding = true;
+        repeatTimer = window.setInterval(() => {
+          if (button.disabled) {
+            stop();
+            return;
+          }
+          stepDelay(direction);
+        }, DELAY_REPEAT_INTERVAL_MS);
+      }, DELAY_HOLD_DELAY_MS);
+    }
+
+    button.addEventListener("pointerdown", start);
+    ["pointerup", "pointerleave", "pointercancel"].forEach((eventName) => {
+      button.addEventListener(eventName, stop);
+    });
+    window.addEventListener("blur", stop);
+
+    button.addEventListener("click", () => {
+      if (isHolding) {
+        isHolding = false;
+        return;
+      }
+      stepDelay(direction);
+    });
   }
 
   function parsePopularStreams(markdown) {
@@ -232,7 +298,7 @@
     document.documentElement.dataset.theme = normalizedTheme;
     elements.themeToggle.setAttribute("aria-checked", String(normalizedTheme === "light"));
     elements.themeToggle.querySelector(".theme-toggle-label").textContent =
-      normalizedTheme === "light" ? "Light mode" : "Dark mode";
+      normalizedTheme === "light" ? t("themeModeLight") : t("themeModeDark");
 
     if (shouldPersist) {
       window.localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
@@ -242,12 +308,12 @@
   function handleDelayInput() {
     const delay = Number.parseFloat(elements.delaySeconds.value);
     if (!Number.isFinite(delay) || delay < 0) {
-      setError("Delay must be zero or a positive finite number.");
+      setError("delayInvalid");
       return;
     }
 
     if (delay < MIN_DELAY_SECONDS || delay > MAX_DELAY_SECONDS) {
-      setError(`Delay must be between ${MIN_DELAY_SECONDS} and ${MAX_DELAY_SECONDS} seconds.`);
+      setError("delayRange", { min: MIN_DELAY_SECONDS, max: MAX_DELAY_SECONDS });
       return;
     }
 
@@ -270,29 +336,30 @@
     const rawDelay = elements.delaySeconds.value.trim();
 
     if (!rawUrl) {
-      return { ok: false, message: "Enter an audio stream URL." };
+      return { ok: false, key: "enterUrl" };
     }
 
     let url;
     try {
       url = new URL(rawUrl);
     } catch {
-      return { ok: false, message: "Enter a valid absolute URL." };
+      return { ok: false, key: "enterValidUrl" };
     }
 
     if (url.protocol !== "http:" && url.protocol !== "https:") {
-      return { ok: false, message: "The stream URL must use HTTP or HTTPS." };
+      return { ok: false, key: "httpsOnly" };
     }
 
     const delaySeconds = Number.parseFloat(rawDelay);
     if (!Number.isFinite(delaySeconds) || delaySeconds < 0) {
-      return { ok: false, message: "Delay must be zero or a positive finite number." };
+      return { ok: false, key: "delayInvalid" };
     }
 
     if (delaySeconds < MIN_DELAY_SECONDS || delaySeconds > MAX_DELAY_SECONDS) {
       return {
         ok: false,
-        message: `Delay must be between ${MIN_DELAY_SECONDS} and ${MAX_DELAY_SECONDS} seconds.`,
+        key: "delayRange",
+        params: { min: MIN_DELAY_SECONDS, max: MAX_DELAY_SECONDS },
       };
     }
 
@@ -308,12 +375,8 @@
     state.wantsPlayback = true;
     state.lastMetadataTitle = options.title || "";
     elements.streamTitle.textContent = options.title || getStreamTitle(streamUrl);
-    setStatus("Loading stream");
-    setMessage(
-      isLikelyHlsUrl(streamUrl)
-        ? "Loading the live HLS audio stream. Playback will begin when enough buffered audio is available."
-        : "Loading the direct audio stream. Delay support depends on the browser and stream.",
-    );
+    setStatus("loadingStreamStatus");
+    setMessage(isLikelyHlsUrl(streamUrl) ? "loadingHlsMessage" : "loadingDirectMessage");
     clearError();
     updateControlState();
     updateMediaSession();
@@ -334,7 +397,7 @@
     }
 
     state.isLoading = false;
-    setError("This browser does not support HLS audio playback.");
+    setError("hlsUnsupported");
     updateControlState();
   }
 
@@ -346,22 +409,22 @@
     }
 
     if (!state.isLoaded) {
-      setMessage(`Delay changed to ${formatSeconds(state.delaySeconds)}. It will be used when the stream is ready.`);
+      setMessage("delayChangedPending", { delay: formatSeconds(state.delaySeconds) });
       return;
     }
 
     const targetTime = getTargetDelayedTime();
     if (targetTime === null) {
       state.pendingDelayApply = true;
-      setBufferStatus(getDelayWaitStatus());
-      setMessage(`Delay changed to ${formatSeconds(state.delaySeconds)}. Waiting until that position is available in the buffer.`);
+      setBufferStatus(...getDelayWaitStatus());
+      setMessage("delayChangedWaiting", { delay: formatSeconds(state.delaySeconds) });
       return;
     }
 
     elements.audio.currentTime = targetTime;
     state.pendingDelayApply = false;
     updateBufferReadout();
-    setMessage(getPlaybackPositionMessage());
+    setMessage(...getPlaybackPositionMessage());
 
     if (state.wantsPlayback && elements.audio.paused) {
       playAudio();
@@ -400,15 +463,15 @@
       state.isLoaded = true;
       state.isLoading = false;
       selectAudioOnlyLevel(data);
-      setStatus("Stream loaded");
-      setMessage("Waiting for enough buffered audio before playback starts.");
+      setStatus("streamLoadedStatus");
+      setMessage("waitingForBuffer");
       updateControlState();
       checkReadyToStart();
     });
 
     onHls(HlsConstructor.Events.LEVEL_LOADED, (_event, data) => {
       if (data.details && data.details.live === false) {
-        setMessage("Loaded a finite HLS audio stream. Delay controls are optimized for live streams.");
+        setMessage("finiteHlsStream");
       }
       checkReadyToStart();
     });
@@ -458,7 +521,7 @@
     addAudioListener("loadedmetadata", () => {
       state.isLoaded = true;
       state.isLoading = false;
-      setStatus("Stream loaded");
+      setStatus("streamLoadedStatus");
       updateControlState();
       checkReadyToStart();
     });
@@ -466,30 +529,30 @@
       if (!state.isLoaded) {
         state.isLoaded = true;
         state.isLoading = false;
-        setStatus("Stream loaded");
+        setStatus("streamLoadedStatus");
         updateControlState();
       }
       checkReadyToStart();
     });
     addAudioListener("progress", checkReadyToStart);
     addAudioListener("waiting", () => {
-      setBufferStatus("Buffering audio");
+      setBufferStatus("bufferingAudioStatus");
       updateControlState();
     });
     addAudioListener("playing", () => {
       state.isLoaded = true;
       state.isLoading = false;
       state.hasStartedPlayback = true;
-      setStatus("Playing");
-      setMessage(getPlaybackPositionMessage());
+      setStatus("playingStatus");
+      setMessage(...getPlaybackPositionMessage());
       clearError();
       updateControlState();
     });
     addAudioListener("play", updateControlState);
     addAudioListener("pause", () => {
       if (state.isLoaded) {
-        setStatus("Paused");
-        setMessage("Paused position will remain resumable while it stays in the local buffer.");
+        setStatus("pausedStatus");
+        setMessage("pausedResumableMessage");
       }
       updateControlState();
     });
@@ -518,22 +581,22 @@
     const audioOnlyIndex = levels.findIndex((level) => level.audioCodec && !level.videoCodec);
     if (audioOnlyIndex >= 0) {
       state.hls.currentLevel = audioOnlyIndex;
-      setMessage("Selected an audio-only HLS variant.");
+      setMessage("audioOnlySelected");
       return;
     }
 
     const hasVideo = levels.some((level) => Boolean(level.videoCodec));
     const hasAudio = levels.some((level) => Boolean(level.audioCodec));
     if (hasVideo && !hasAudio) {
-      setError("This stream appears to contain video without a supported audio variant.");
+      setError("videoOnlyError");
     } else if (hasVideo) {
-      setMessage("No audio-only variant was advertised. DriftPlay will use audio playback only; video tracks are not shown.");
+      setMessage("noAudioOnlyVariant");
     }
   }
 
   function requestPlayback(action) {
     if (!state.isLoaded && !state.isLoading) {
-      setError("Load an audio stream before starting playback.");
+      setError("loadBeforePlay");
       return;
     }
 
@@ -541,7 +604,7 @@
     clearError();
 
     if (action === "resume" && !isTimeBuffered(elements.audio.currentTime)) {
-      setError("The paused position is no longer in the local buffer. Load the stream again or start closer to live.");
+      setError("pausedExpiredResume");
       return;
     }
 
@@ -550,7 +613,7 @@
       return;
     }
 
-    setMessage("Waiting for enough buffered audio before playback starts.");
+    setMessage("waitingForBuffer");
     checkReadyToStart();
   }
 
@@ -569,7 +632,9 @@
 
     if (state.directAudio) {
       if (state.delaySeconds === 0) {
-        setBufferStatus(elements.audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "Live" : "Loading direct audio");
+        setBufferStatus(
+          elements.audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "liveStatus" : "loadingDirectAudioStatus",
+        );
         playAudio();
         return;
       }
@@ -577,8 +642,8 @@
       const directTargetTime = getTargetDelayedTime();
       if (directTargetTime === null) {
         state.pendingDelayApply = true;
-        setBufferStatus(getDelayWaitStatus());
-        setMessage(`Buffering direct audio until ${formatSeconds(state.delaySeconds)} of delay is available.`);
+        setBufferStatus(...getDelayWaitStatus());
+        setMessage("bufferingDirectUntil", { delay: formatSeconds(state.delaySeconds) });
         return;
       }
 
@@ -593,7 +658,7 @@
 
     const targetTime = getTargetDelayedTime();
     if (targetTime === null) {
-      setBufferStatus(getDelayWaitStatus());
+      setBufferStatus(...getDelayWaitStatus());
       return;
     }
 
@@ -611,12 +676,8 @@
       clearError();
     } catch (error) {
       state.wantsPlayback = false;
-      setStatus("Ready");
-      setError(
-        error && error.name === "NotAllowedError"
-          ? "Playback was blocked by browser autoplay policy. Use the audio element controls to start audio."
-          : "The browser could not start audio playback. Check codec support and stream compatibility.",
-      );
+      setStatus("readyStatus");
+      setError(error && error.name === "NotAllowedError" ? "autoplayBlocked" : "playbackFailed");
       updateControlState();
     }
   }
@@ -711,36 +772,42 @@
     elements.bufferedDuration.textContent = `${formatSeconds(bufferedAhead)}`;
     elements.liveDistance.textContent =
       liveEdge === null || !Number.isFinite(currentTime)
-        ? "Unknown"
+        ? t("unknownValue")
         : `${formatSeconds(Math.max(0, liveEdge - currentTime))}`;
 
     if (state.directAudio && !buffered.length) {
-      setBufferStatus(state.delaySeconds === 0 ? "Loading direct audio" : getDelayWaitStatus());
+      if (state.delaySeconds === 0) {
+        setBufferStatus("loadingDirectAudioStatus");
+      } else {
+        setBufferStatus(...getDelayWaitStatus());
+      }
     } else if (!buffered.length) {
-      setBufferStatus(state.delaySeconds === 0 ? "Live" : "No buffered audio");
+      setBufferStatus(state.delaySeconds === 0 ? "liveStatus" : "noBufferedAudio");
     } else if (elements.audio.paused) {
-      setBufferStatus(isTimeBuffered(currentTime) ? "Paused position retained" : "Paused position expired");
+      setBufferStatus(isTimeBuffered(currentTime) ? "pausedRetainedStatus" : "pausedExpiredStatus");
     } else if (bufferedAhead < 1) {
-      setBufferStatus(state.delaySeconds === 0 ? "Live" : "Buffering audio");
+      setBufferStatus(state.delaySeconds === 0 ? "liveStatus" : "bufferingAudioStatus");
+    } else if (state.delaySeconds === 0) {
+      setBufferStatus("liveStatus");
     } else {
-      setBufferStatus(state.delaySeconds === 0 ? "Live" : `${formatSeconds(bufferedAhead)} buffered ahead`);
+      setBufferStatus("bufferedAheadStatus", { seconds: formatSeconds(bufferedAhead) });
     }
   }
 
   function getDelayWaitStatus() {
-    return state.delaySeconds === 0 ? "Live" : `Waiting for ${formatSeconds(state.delaySeconds)} of audio`;
+    return state.delaySeconds === 0 ? ["liveStatus"] : ["waitingForDelayStatus", { delay: formatSeconds(state.delaySeconds) }];
   }
 
   function getPlaybackPositionMessage() {
     if (state.directAudio) {
       return state.delaySeconds === 0
-        ? "Direct audio playback is live."
-        : `Direct audio playback is running ${formatSeconds(state.delaySeconds)} behind the stream buffer.`;
+        ? ["directLiveMessage"]
+        : ["directDelayMessage", { delay: formatSeconds(state.delaySeconds) }];
     }
 
     return state.delaySeconds === 0
-      ? "Audio playback is live."
-      : `Audio playback is running ${formatSeconds(state.delaySeconds)} behind the live edge.`;
+      ? ["liveMessage"]
+      : ["delayMessage", { delay: formatSeconds(state.delaySeconds) }];
   }
 
   function getBufferedAhead(time) {
@@ -761,20 +828,20 @@
     }
 
     if (!isTimeBuffered(elements.audio.currentTime)) {
-      setError("The paused position has expired from the local buffer. Resume closer to live or reload the stream.");
+      setError("pausedExpiredError");
       updateControlState();
     }
   }
 
   function handleHlsError(data) {
     if (!data) {
-      setError("An unknown HLS playback error occurred.");
+      setError("unknownHlsError");
       return;
     }
 
     if (!data.fatal) {
       if (data.details) {
-        setMessage(`Recoverable HLS warning: ${humanizeHlsDetail(data.details)}.`);
+        setMessage("recoverableHlsWarning", { detail: humanizeHlsDetail(data.details) });
       }
       return;
     }
@@ -782,54 +849,54 @@
     const HlsConstructor = window.Hls;
     if (data.type === HlsConstructor.ErrorTypes.NETWORK_ERROR && state.fatalNetworkRecoveries < MAX_RECOVERY_ATTEMPTS) {
       state.fatalNetworkRecoveries += 1;
-      setStatus("Recovering network");
-      setMessage("Recovering from a network error while loading the HLS stream.");
+      setStatus("recoveringNetworkStatus");
+      setMessage("recoveringNetworkMessage");
       state.hls.startLoad();
       return;
     }
 
     if (data.type === HlsConstructor.ErrorTypes.MEDIA_ERROR && state.fatalMediaRecoveries < MAX_RECOVERY_ATTEMPTS) {
       state.fatalMediaRecoveries += 1;
-      setStatus("Recovering media");
-      setMessage("Recovering from a media decoding or buffer error.");
+      setStatus("recoveringMediaStatus");
+      setMessage("recoveringMediaMessage");
       state.hls.recoverMediaError();
       return;
     }
 
-    setStatus("Error");
-    setError(getHlsErrorMessage(data));
+    setStatus("errorStatus");
+    setError(...getHlsErrorMessage(data));
     state.wantsPlayback = false;
     updateControlState();
   }
 
   function getHlsErrorMessage(data) {
-    const detail = data.details ? humanizeHlsDetail(data.details) : "unknown HLS error";
+    const detail = data.details ? humanizeHlsDetail(data.details) : t("unknownHlsDetail");
 
     if (String(data.details || "").includes("manifest")) {
-      return `The HLS manifest could not be loaded or parsed (${detail}). Check the URL and CORS headers.`;
+      return ["hlsManifestError", { detail }];
     }
 
     if (String(data.details || "").includes("frag") || String(data.details || "").includes("level")) {
-      return `The stream media segments could not be loaded (${detail}). Check CORS, network access, and HLS manifest availability.`;
+      return ["hlsFragError", { detail }];
     }
 
     if (String(data.details || "").includes("buffer") || data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
-      return `The browser could not buffer or decode this audio stream (${detail}). The codec may be unsupported or the stream may contain incompatible video.`;
+      return ["hlsBufferError", { detail }];
     }
 
-    return `HLS playback failed (${detail}). Check stream compatibility, CORS, and network access.`;
+    return ["hlsGenericError", { detail }];
   }
 
   function handleMediaError() {
     const mediaError = elements.audio.error;
-    const messages = {
-      1: "Audio playback was aborted.",
-      2: "A network error stopped audio playback. Check connectivity and CORS access.",
-      3: "The browser could not decode this stream. The audio codec may be unsupported or the stream may contain incompatible video.",
-      4: "The audio source is unsupported or unavailable.",
+    const messageKeys = {
+      1: "mediaAbortedError",
+      2: "mediaNetworkError",
+      3: "mediaDecodeError",
+      4: "mediaUnsupportedError",
     };
-    setStatus("Error");
-    setError(messages[mediaError && mediaError.code] || "An unknown media playback error occurred.");
+    setStatus("errorStatus");
+    setError(messageKeys[mediaError && mediaError.code] || "mediaUnknownError");
     state.wantsPlayback = false;
     updateControlState();
   }
@@ -868,35 +935,68 @@
     state.directAudio = false;
     state.lastMetadataTitle = "";
 
-    setStatus("Idle");
-    setBufferStatus("No buffered audio");
+    setStatus("idleStatus");
+    setBufferStatus("noBufferedAudio");
     elements.bufferedDuration.textContent = "0.0s";
-    elements.liveDistance.textContent = "Unknown";
-    elements.streamTitle.textContent = "No stream loaded";
+    elements.liveDistance.textContent = t("unknownValue");
+    elements.streamTitle.textContent = t("noStreamLoaded");
     clearError();
-    setMessage("");
+    setMessage(null);
     updateControlState();
   }
 
-  function setStatus(message) {
-    elements.connectionStatus.textContent = message;
+  function setStatus(key, params) {
+    state.statusKey = key;
+    state.statusParams = params || null;
+    elements.connectionStatus.textContent = key ? t(key, params) : "";
   }
 
-  function setBufferStatus(message) {
-    elements.bufferStatus.textContent = message;
+  function setBufferStatus(key, params) {
+    state.bufferStatusKey = key;
+    state.bufferStatusParams = params || null;
+    elements.bufferStatus.textContent = key ? t(key, params) : "";
   }
 
-  function setMessage(message) {
-    elements.messageArea.textContent = message;
+  function setMessage(key, params) {
+    state.messageKey = key;
+    state.messageParams = params || null;
+    elements.messageArea.textContent = key ? t(key, params) : "";
   }
 
-  function setError(message) {
-    elements.errorArea.textContent = message;
+  function setError(key, params) {
+    state.errorKey = key;
+    state.errorParams = params || null;
+    elements.errorArea.textContent = key ? t(key, params) : "";
   }
 
   function clearError() {
-    elements.errorArea.textContent = "";
+    setError(null);
   }
+
+  function setPopularStreamsStatus(key) {
+    state.popularStreamsStatusKey = key;
+    elements.popularStreamsStatus.textContent = key ? t(key) : "";
+  }
+
+  function refreshTranslatedUi() {
+    elements.connectionStatus.textContent = state.statusKey ? t(state.statusKey, state.statusParams) : "";
+    elements.bufferStatus.textContent = state.bufferStatusKey ? t(state.bufferStatusKey, state.bufferStatusParams) : "";
+    elements.messageArea.textContent = state.messageKey ? t(state.messageKey, state.messageParams) : "";
+    elements.errorArea.textContent = state.errorKey ? t(state.errorKey, state.errorParams) : "";
+    elements.popularStreamsStatus.textContent = state.popularStreamsStatusKey ? t(state.popularStreamsStatusKey) : "";
+
+    if (!state.streamUrl) {
+      elements.streamTitle.textContent = t("noStreamLoaded");
+    }
+
+    elements.themeToggle.querySelector(".theme-toggle-label").textContent =
+      document.documentElement.dataset.theme === "light" ? t("themeModeLight") : t("themeModeDark");
+
+    updateBufferReadout();
+    updateMediaSession();
+  }
+
+  window.addEventListener("driftplay:languagechange", refreshTranslatedUi);
 
   function updateControlState() {
     const isPlaying = state.isLoaded && !elements.audio.paused;
@@ -914,9 +1014,9 @@
     }
 
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: state.lastMetadataTitle || getStreamTitle(state.streamUrl) || "DriftPlay audio stream",
+      title: state.lastMetadataTitle || getStreamTitle(state.streamUrl) || t("mediaSessionDefaultTitle"),
       artist: "DriftPlay",
-      album: "Live audio",
+      album: t("mediaSessionAlbum"),
     });
 
     setMediaSessionAction("play", () => requestPlayback("play"));

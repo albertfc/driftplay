@@ -27,6 +27,8 @@ https://albertfc.github.io/driftplay/
 - Recoverable hls.js media and network error handling with retry limits.
 - Media Session API integration for supported browsers.
 - Light and dark theme selector with local browser persistence.
+- Multi-language UI (English, Català, Castellano) with automatic browser-language
+  detection and local persistence.
 - Relative asset paths for GitHub Pages project-site hosting under `/driftplay/`.
 
 ## Usage
