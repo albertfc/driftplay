@@ -10,8 +10,11 @@
   const THEME_STORAGE_KEY = "driftplay-theme";
   const RADIO_SOURCE_URL = "https://raw.githubusercontent.com/LaQuay/TDTChannels/master/RADIO.md";
   const POPULAR_STREAMS = [
-    { sourceName: "Radio Nacional", displayName: "Radio Nacional" },
+    { sourceName: "RAC1", displayName: "RAC1" },
     { sourceName: "Catalunya Ràdio", displayName: "Catalunya Radio" },
+    { sourceName: "Radio Nacional", displayName: "Radio Nacional" },
+    { sourceName: "Cadena SER", displayName: "Cadena SER" },
+    { sourceName: "COPE", displayName: "COPE" },
     { sourceName: "Onda Cero", displayName: "Onda Cero" },
     { sourceName: "Radio Euskadi", displayName: "Radio Euskadi" },
   ];
@@ -162,7 +165,9 @@
   function getPreferredStreamUrl(cell) {
     const links = getMarkdownLinks(cell);
     const hlsLink = links.find((link) => link.label.toLowerCase().includes("m3u8") || link.url.toLowerCase().includes(".m3u8"));
-    return hlsLink ? hlsLink.url : "";
+    const mp3Link = links.find((link) => link.label.toLowerCase().includes("mp3") || link.url.toLowerCase().includes(".mp3"));
+    const aacLink = links.find((link) => link.label.toLowerCase().includes("aac") || link.url.toLowerCase().includes(".aac"));
+    return hlsLink ? hlsLink.url : mp3Link ? mp3Link.url : aacLink ? aacLink.url : "";
   }
 
   function getFirstMarkdownLinkUrl(cell) {

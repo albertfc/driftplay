@@ -17,7 +17,8 @@ https://albertfc.github.io/driftplay/
 - Direct browser audio playback for MP3/AAC-style live stream URLs.
 - Configurable fixed live delay from 0 to 600 seconds.
 - Popular stream presets loaded asynchronously from TDTChannels RADIO.md for
-  Radio Nacional, Catalunya Radio, Onda Cero, and Radio Euskadi.
+  Cadena SER, COPE, Radio Nacional, Catalunya Radio, Onda Cero, Radio Euskadi,
+  and RAC1.
 - Startup waits for enough buffered or seekable media before attempting playback.
 - Pause and resume support through the browser audio element while the paused
   position remains locally buffered.
