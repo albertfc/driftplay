@@ -91,7 +91,7 @@
       return;
     }
 
-    loadStream(validation.url, validation.delaySeconds);
+    loadStream(validation.url);
   });
 
   elements.stopButton.addEventListener("click", stopPlayback);
@@ -225,7 +225,7 @@
       button.type = "button";
       button.addEventListener("click", () => {
         elements.streamUrl.value = stream.streamUrl;
-        loadStream(stream.streamUrl, state.delaySeconds, { title: stream.title });
+        loadStream(stream.streamUrl, { title: stream.title });
       });
 
       const image = document.createElement("img");
@@ -366,11 +366,12 @@
     return { ok: true, url: url.href, delaySeconds };
   }
 
-  function loadStream(streamUrl, delaySeconds, options = {}) {
+  function loadStream(streamUrl, options = {}) {
     resetPlayback();
 
     state.streamUrl = streamUrl;
-    state.delaySeconds = clampDelay(delaySeconds);
+    state.delaySeconds = DEFAULT_DELAY_SECONDS;
+    elements.delaySeconds.value = formatDelayValue(DEFAULT_DELAY_SECONDS);
     state.isLoading = true;
     state.wantsPlayback = true;
     state.lastMetadataTitle = options.title || "";
