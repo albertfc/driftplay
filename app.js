@@ -51,6 +51,7 @@
     fatalNetworkRecoveries: 0,
     fatalMediaRecoveries: 0,
     nativeHls: false,
+    directAudio: false,
     lastMetadataTitle: "",
   };
 
@@ -237,7 +238,7 @@
     const rawDelay = elements.delaySeconds.value.trim();
 
     if (!rawUrl) {
-      return { ok: false, message: "Enter an HLS audio stream URL." };
+      return { ok: false, message: "Enter an audio stream URL." };
     }
 
     let url;
@@ -276,10 +277,19 @@
     state.lastMetadataTitle = options.title || "";
     elements.streamTitle.textContent = options.title || getStreamTitle(streamUrl);
     setStatus("Loading stream");
-    setMessage("Loading the live audio stream. Playback will begin when enough buffered audio is available.");
+    setMessage(
+      isLikelyHlsUrl(streamUrl)
+        ? "Loading the live HLS audio stream. Playback will begin when enough buffered audio is available."
+        : "Loading the direct audio stream. Delay support depends on the browser and stream.",
+    );
     clearError();
     updateControlState();
     updateMediaSession();
+
+    if (!isLikelyHlsUrl(streamUrl)) {
+      loadWithDirectAudio(streamUrl);
+      return;
+    }
 
     if (elements.audio.canPlayType("application/vnd.apple.mpegurl")) {
       loadWithNativeHls(streamUrl);
@@ -310,6 +320,13 @@
 
     const targetTime = getTargetDelayedTime();
     if (targetTime === null) {
+      if (state.directAudio) {
+        state.pendingDelayApply = false;
+        setBufferStatus(state.delaySeconds === 0 ? "Live" : "Delay unavailable");
+        setMessage("This direct audio stream does not expose a delayed buffered range. Playback continues at the browser's available live position.");
+        return;
+      }
+
       state.pendingDelayApply = true;
       setBufferStatus(getDelayWaitStatus());
       setMessage(`Delay changed to ${formatSeconds(state.delaySeconds)}. Waiting until that position is available in the buffer.`);
@@ -399,6 +416,15 @@
     startBufferMonitor();
   }
 
+  function loadWithDirectAudio(streamUrl) {
+    state.directAudio = true;
+    addAudioListeners();
+    elements.audio.src = streamUrl;
+    elements.audio.load();
+    startBufferMonitor();
+    playAudio();
+  }
+
   function onHls(eventName, handler) {
     state.hls.on(eventName, handler);
     state.hlsListeners.push([eventName, handler]);
@@ -427,6 +453,8 @@
       updateControlState();
     });
     addAudioListener("playing", () => {
+      state.isLoaded = true;
+      state.isLoading = false;
       state.hasStartedPlayback = true;
       setStatus("Playing");
       setMessage(getPlaybackPositionMessage());
@@ -481,7 +509,7 @@
 
   function requestPlayback(action) {
     if (!state.isLoaded && !state.isLoading) {
-      setError("Load an HLS audio stream before starting playback.");
+      setError("Load an audio stream before starting playback.");
       return;
     }
 
@@ -512,6 +540,12 @@
     updateBufferReadout();
 
     if (!state.wantsPlayback || !state.isLoaded || !state.streamUrl) {
+      return;
+    }
+
+    if (state.directAudio) {
+      setBufferStatus(elements.audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "Live" : "Loading direct audio");
+      playAudio();
       return;
     }
 
@@ -630,7 +664,9 @@
         ? "Unknown"
         : `${formatSeconds(Math.max(0, liveEdge - currentTime))}`;
 
-    if (!buffered.length) {
+    if (state.directAudio) {
+      setBufferStatus(elements.audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "Live" : "Loading direct audio");
+    } else if (!buffered.length) {
       setBufferStatus(state.delaySeconds === 0 ? "Live" : "No buffered audio");
     } else if (elements.audio.paused) {
       setBufferStatus(isTimeBuffered(currentTime) ? "Paused position retained" : "Paused position expired");
@@ -646,6 +682,10 @@
   }
 
   function getPlaybackPositionMessage() {
+    if (state.directAudio) {
+      return "Direct audio playback is live.";
+    }
+
     return state.delaySeconds === 0
       ? "Audio playback is live."
       : `Audio playback is running ${formatSeconds(state.delaySeconds)} behind the live edge.`;
@@ -773,6 +813,7 @@
     state.fatalNetworkRecoveries = 0;
     state.fatalMediaRecoveries = 0;
     state.nativeHls = false;
+    state.directAudio = false;
     state.lastMetadataTitle = "";
 
     setStatus("Idle");
@@ -820,7 +861,7 @@
     navigator.mediaSession.metadata = new MediaMetadata({
       title: state.lastMetadataTitle || getStreamTitle(state.streamUrl) || "DriftPlay audio stream",
       artist: "DriftPlay",
-      album: "Live HLS audio",
+      album: "Live audio",
     });
 
     setMediaSessionAction("play", () => requestPlayback("play"));
@@ -846,6 +887,14 @@
       return `${url.hostname}${url.pathname}`;
     } catch {
       return streamUrl;
+    }
+  }
+
+  function isLikelyHlsUrl(streamUrl) {
+    try {
+      return new URL(streamUrl).pathname.toLowerCase().endsWith(".m3u8");
+    } catch {
+      return /\.m3u8(?:$|[?#])/i.test(streamUrl);
     }
   }
 

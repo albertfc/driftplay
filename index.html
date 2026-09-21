@@ -3,18 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>DriftPlay audio HLS player</title>
+    <title>DriftPlay audio player</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app-shell">
       <section class="hero" aria-labelledby="app-title">
         <div>
-          <p class="eyebrow">Audio-only live HLS player</p>
+          <p class="eyebrow">Audio-only live stream player</p>
           <h1 id="app-title">DriftPlay</h1>
           <p class="lede">
-            Load a CORS-enabled audio <code>.m3u8</code> stream and listen
-            behind the live edge with a configurable delay buffer.
+            Load a CORS-enabled HLS or direct audio stream and listen behind
+            the live edge with a configurable delay buffer where available.
           </p>
         </div>
         <div class="hero-tools">
@@ -51,14 +51,14 @@
         <h2 id="stream-form-title">Stream setup</h2>
         <form id="stream-form" novalidate>
           <div class="field">
-            <label for="stream-url">HLS audio stream URL</label>
+            <label for="stream-url">Audio stream URL</label>
             <input
               id="stream-url"
               name="streamUrl"
               type="url"
               inputmode="url"
               autocomplete="url"
-              placeholder="https://example.com/live/audio.m3u8"
+              placeholder="https://example.com/live/audio.m3u8 or https://example.com/live/audio.mp3"
               required
             />
           </div>
@@ -120,13 +120,13 @@
       <section class="panel limitations" aria-labelledby="limitations-title">
         <h2 id="limitations-title">Important limitations</h2>
         <ul>
-          <li>The HLS manifest and all audio segments must allow browser CORS requests.</li>
+          <li>The HLS manifest, direct audio stream, and all required segments must allow browser CORS requests.</li>
           <li>GitHub Pages cannot bypass CORS because DriftPlay has no backend proxy.</li>
           <li>The browser tab must stay open for live media ingestion to continue.</li>
           <li>Browser memory, Media Source Extensions, hls.js eviction, and the origin playlist window limit retained audio.</li>
           <li>Paused positions can expire, and the buffer is not persistent across reloads.</li>
           <li>Autoplay policies may require clicking Play before audio starts.</li>
-          <li>HLS audio codec support varies by browser; streams with video or unsupported codecs may fail.</li>
+          <li>HLS and direct audio codec support varies by browser; streams with video or unsupported codecs may fail.</li>
         </ul>
       </section>
     </main>
