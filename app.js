@@ -3,9 +3,10 @@
 
   const MIN_DELAY_SECONDS = 0;
   const MAX_DELAY_SECONDS = 600;
-  const DEFAULT_DELAY_SECONDS = 10;
+  const DEFAULT_DELAY_SECONDS = 0;
   const MAX_RECOVERY_ATTEMPTS = 2;
   const BUFFER_EPSILON_SECONDS = 0.35;
+  const DELAY_STEP_SECONDS = 1;
   const DELAY_APPLY_DEBOUNCE_MS = 350;
   const THEME_STORAGE_KEY = "driftplay-theme";
   const RADIO_SOURCE_URL = "https://raw.githubusercontent.com/LaQuay/TDTChannels/master/RADIO.md";
@@ -24,6 +25,8 @@
     streamUrl: document.querySelector("#stream-url"),
     themeToggle: document.querySelector("#theme-toggle"),
     delaySeconds: document.querySelector("#delay-seconds"),
+    delayDecrease: document.querySelector("#delay-decrease"),
+    delayIncrease: document.querySelector("#delay-increase"),
     playButton: document.querySelector("#play-button"),
     stopButton: document.querySelector("#stop-button"),
     popularStreamsStatus: document.querySelector("#popular-streams-status"),
@@ -58,9 +61,8 @@
     lastMetadataTitle: "",
   };
 
-  elements.delaySeconds.addEventListener("input", () => {
-    handleDelayInput();
-  });
+  elements.delayDecrease.addEventListener("click", () => stepDelay(-1));
+  elements.delayIncrease.addEventListener("click", () => stepDelay(1));
 
   elements.themeToggle.addEventListener("click", () => {
     applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light", true);
@@ -107,6 +109,13 @@
     } catch {
       elements.popularStreamsStatus.textContent = "Popular streams could not be loaded.";
     }
+  }
+
+  function stepDelay(direction) {
+    const currentDelay = Number.parseFloat(elements.delaySeconds.value) || 0;
+    const nextDelay = clampDelay(currentDelay + direction * DELAY_STEP_SECONDS);
+    elements.delaySeconds.value = formatDelayValue(nextDelay);
+    handleDelayInput();
   }
 
   function parsePopularStreams(markdown) {
@@ -227,6 +236,7 @@
 
     state.delaySeconds = delay;
     clearError();
+    updateControlState();
 
     if (state.delayApplyTimer) {
       window.clearTimeout(state.delayApplyTimer);
@@ -873,9 +883,12 @@
 
   function updateControlState() {
     const isPlaying = state.isLoaded && !elements.audio.paused;
+    const delay = Number.parseFloat(elements.delaySeconds.value) || 0;
 
     elements.playButton.disabled = state.isLoading || isPlaying;
     elements.stopButton.disabled = !isPlaying;
+    elements.delayDecrease.disabled = delay <= MIN_DELAY_SECONDS;
+    elements.delayIncrease.disabled = delay >= MAX_DELAY_SECONDS;
   }
 
   function updateMediaSession() {
@@ -949,6 +962,10 @@
 
   function clampDelay(delay) {
     return Math.min(Math.max(delay, MIN_DELAY_SECONDS), MAX_DELAY_SECONDS);
+  }
+
+  function formatDelayValue(delay) {
+    return Number.isInteger(delay) ? String(delay) : String(delay);
   }
 
   function formatSeconds(seconds) {

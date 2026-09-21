@@ -266,6 +266,7 @@ label,
 
 input[type="url"],
 input[type="number"],
+input[type="text"],
 select {
   width: 100%;
   border: 1px solid var(--border);
@@ -287,7 +288,30 @@ select:focus-visible {
   gap: 0.65rem;
 }
 
+.delay-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.delay-stepper button {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  padding: 0;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.delay-stepper input[readonly] {
+  cursor: default;
+  text-align: center;
+}
+
 .inline-input span,
+.delay-stepper span,
 .hint,
 .muted {
   color: var(--muted);
@@ -307,7 +331,7 @@ select:focus-visible {
   text-align: right;
 }
 
-.player-settings input[type="number"] {
+.player-settings input[type="text"] {
   width: 5.5rem;
 }
 

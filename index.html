@@ -75,19 +75,19 @@
             <p id="stream-title" class="muted">No stream loaded</p>
           </div>
           <div class="player-settings">
-            <label for="delay-seconds">Delay behind live edge</label>
-            <div class="inline-input">
+            <label for="delay-seconds">Delay in seconds</label>
+            <div class="delay-stepper">
+              <button id="delay-decrease" type="button" aria-label="Decrease delay">-</button>
               <input
                 id="delay-seconds"
                 name="delaySeconds"
-                type="number"
-                min="0"
-                max="600"
-                step="0.5"
-                value="10"
+                type="text"
+                inputmode="none"
+                value="0"
+                readonly
                 required
               />
-              <span>seconds</span>
+              <button id="delay-increase" type="button" aria-label="Increase delay">+</button>
             </div>
           </div>
         </div>
