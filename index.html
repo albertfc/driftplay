@@ -117,18 +117,6 @@
         <div id="error-area" class="error" role="alert" aria-live="assertive"></div>
       </section>
 
-      <section class="panel limitations" aria-labelledby="limitations-title">
-        <h2 id="limitations-title">Important limitations</h2>
-        <ul>
-          <li>The HLS manifest, direct audio stream, and all required segments must allow browser CORS requests.</li>
-          <li>GitHub Pages cannot bypass CORS because DriftPlay has no backend proxy.</li>
-          <li>The browser tab must stay open for live media ingestion to continue.</li>
-          <li>Browser memory, Media Source Extensions, hls.js eviction, and the origin playlist window limit retained audio.</li>
-          <li>Paused positions can expire, and the buffer is not persistent across reloads.</li>
-          <li>Autoplay policies may require clicking Play before audio starts.</li>
-          <li>HLS and direct audio codec support varies by browser; streams with video or unsupported codecs may fail.</li>
-        </ul>
-      </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
